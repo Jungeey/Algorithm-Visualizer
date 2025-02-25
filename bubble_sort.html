@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bubble Sort Visualization</title>
+    <style>
+        body {
+            text-align: center;
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+        }
+
+        .array-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 20px;
+            gap: 5px;
+        }
+
+        .array-element {
+            padding: 15px;
+            font-size: 24px;
+            font-weight: bold;
+            background: #2196F3;
+            color: white;
+            border-radius: 5px;
+            transition: transform 0.5s ease, background 0.3s;
+            position: relative;
+        }
+
+        .highlight {
+            background: red !important;
+        }
+
+        .sorted {
+            background: green !important;
+        }
+
+        button {
+            margin: 10px;
+            padding: 12px 20px;
+            font-size: 18px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .log-container {
+            text-align: left;
+            margin: 20px auto;
+            width: 60%;
+            font-size: 16px;
+        }
+
+        .log-entry {
+            background: #ffffff;
+            padding: 8px;
+            margin: 5px 0;
+            border-left: 5px solid blue;
+            border-radius: 3px;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .log-swap {
+            border-left-color: red;
+            font-weight: bold;
+        }
+
+        .log-no-swap {
+            border-left-color: green;
+        }
+
+        .progress-bar {
+            width: 60%;
+            height: 20px;
+            background: #ddd;
+            border-radius: 10px;
+            margin: 10px auto;
+            overflow: hidden;
+        }
+
+        .progress {
+            height: 100%;
+            width: 0;
+            background: #4CAF50;
+            transition: width 0.5s ease-in-out;
+        }
+
+        .speed-control {
+            margin: 10px;
+            font-size: 16px;
+        }
+
+        .controls-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .controls-container input,
+        .controls-container select {
+            padding: 8px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        .controls-container button {
+            background: #f44336;
+        }
+
+        .final-sorted {
+            background-color: green;
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>Bubble Sort Visualization</h2>
+    <div class="progress-bar">
+        <div id="progress" class="progress"></div>
+    </div>
+    <div id="array-container" class="array-container"></div>
+    <button id="start-button" onclick="startSorting()">Start Sorting</button>
+
+    <div class="controls-container">
+        <div class="speed-control">
+            <label for="speed">Speed:</label>
+            <input type="range" id="speed" min="100" max="1000" step="100" value="500">
+            <span id="speed-value">500ms</span>
+        </div>
+        <button id="pause-button" onclick="pauseSorting()" disabled>Pause</button>
+        <button id="resume-button" onclick="resumeSorting()" disabled>Resume</button>
+        <button id="reset-button" onclick="resetSorting()">Reset</button>
+    </div>
+
+    <h3>Sorting Log:</h3>
+    <div id="log-container" class="log-container"></div>
+
+
+    <script>
+        let array = [45, 12, 78, 23, 56, 89, 15, 34, 67, 90];
+        const arrayContainer = document.getElementById("array-container");
+        const logContainer = document.getElementById("log-container");
+        const startButton = document.getElementById("start-button");
+        const progressBar = document.getElementById("progress");
+        const pauseButton = document.getElementById("pause-button");
+        const resumeButton = document.getElementById("resume-button");
+        const resetButton = document.getElementById("reset-button");
+        const speedInput = document.getElementById("speed");
+        const speedValue = document.getElementById("speed-value");
+
+        let sortSpeed = 500; // Default speed
+        let sorting = false;
+        let paused = false;
+        let currentStep = 0;
+        let steps = [];
+        let len = array.length;
+        let currentPass = 0;
+        let currentIteration = 0;
+
+        // Update speed value display
+        speedInput.addEventListener('input', () => {
+            sortSpeed = speedInput.value;
+            speedValue.textContent = `${sortSpeed}ms`;
+            if (sorting && !paused) {
+                resetSorting();
+                startSorting();
+            }
+        });
+
+        function displayArray(highlightIndices = [], sortedIndex = null, finalSort = false) {
+            arrayContainer.innerHTML = "";
+            array.forEach((num, index) => {
+                let element = document.createElement("div");
+                element.className = "array-element";
+                element.textContent = num;
+                element.style.order = index;
+                if (highlightIndices.includes(index)) element.classList.add("highlight");
+                if (sortedIndex !== null && index >= sortedIndex) element.classList.add("sorted");
+                if (finalSort) element.classList.add("final-sorted"); // Class for final sorted state
+                arrayContainer.appendChild(element);
+            });
+        }
+
+        function logMessage(message, type = "") {
+            const logEntry = document.createElement("div");
+            logEntry.className = "log-entry " + type;
+            logEntry.innerHTML = message;
+            logContainer.appendChild(logEntry);
+        }
+
+        async function swapElements(i, j) {
+            const elements = document.querySelectorAll(".array-element");
+            const element1 = elements[i];
+            const element2 = elements[j];
+
+            const temp1 = element1.getBoundingClientRect();
+            const temp2 = element2.getBoundingClientRect();
+
+            element1.style.transition = "transform 0.5s ease";
+            element2.style.transition = "transform 0.5s ease";
+
+            element1.style.transform = `translateX(${temp2.left - temp1.left}px) translateY(${temp2.top - temp1.top}px)`;
+            element2.style.transform = `translateX(${temp1.left - temp2.left}px) translateY(${temp1.top - temp2.top}px)`;
+
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            [array[i], array[j]] = [array[j], array[i]];
+
+            element1.style.transform = "none";
+            element2.style.transform = "none";
+
+            displayArray();
+        }
+
+        async function bubbleSort() {
+            for (let pass = currentPass; pass < len - 1; pass++) {
+                if (currentIteration === 0) {
+                    logMessage(`<b>Pass ${pass + 1}:</b>`);
+                }
+
+                for (let iteration = currentIteration; iteration < len - pass - 1; iteration++) {
+                    if (paused) {
+                        currentPass = pass;
+                        currentIteration = iteration;
+                        steps.push({ pass, iteration });
+                        return;
+                    }
+
+                    // Highlighting the elements being compared
+                    let highlightIndices = [iteration, iteration + 1];
+                    displayArray(highlightIndices, len - pass);
+
+                    // Updating the log with the highlighted elements
+                    let beforeSwap = [...array];
+                    if (array[iteration] > array[iteration + 1]) {
+                        logMessage(`Iteration ${iteration + 1}: ${array.map((num, idx) => idx === iteration || idx === iteration + 1 ? `<span style="color:red;">${num}</span>` : num).join(", ")} <br><b>Swapped → ${array.join(", ")}</b>`, "log-swap");
+                        await swapElements(iteration, iteration + 1);
+                    } else {
+                        logMessage(`Iteration ${iteration + 1}: ${array.map((num, idx) => idx === iteration || idx === iteration + 1 ? `<span style="color:red;">${num}</span>` : num).join(", ")} <br> No swap`, "log-no-swap");
+                    }
+
+                    await new Promise(resolve => setTimeout(resolve, sortSpeed));
+                }
+                currentIteration = 0;
+                progressBar.style.width = ((pass + 1) / (len - 1)) * 100 + "%";
+            }
+
+            logMessage(`<b>Final sorted array:</b> ${array.join(", ")}`);
+
+            // Mark the entire array as green for final sorted state
+            displayArray([], len - 1, true); // Pass the finalSort flag as true to turn the array green
+            disableAllButtonsExceptStart();
+        }
+
+        function disableAllButtonsExceptStart() {
+            pauseButton.disabled = true;
+            resumeButton.disabled = true;
+            resetButton.disabled = true;
+            startButton.disabled = false; // Enable Start Sorting button
+        }
+
+        function startSorting() {
+            sorting = true;
+            paused = false;
+            currentPass = 0;
+            currentIteration = 0;
+            logContainer.innerHTML = ""; // Clear logs
+            bubbleSort();
+            startButton.disabled = true;
+            progressBar.style.width = "0%"; // Correct way to set the progress bar to 0%
+            pauseButton.disabled = false;
+            resumeButton.disabled = true;
+            resetButton.disabled = false;
+        }
+
+        function pauseSorting() {
+            paused = true;
+            pauseButton.disabled = true;
+            resumeButton.disabled = false;
+        }
+
+        function resumeSorting() {
+            paused = false;
+            steps.forEach(step => {
+                currentPass = step.pass;
+                currentIteration = step.iteration;
+            });
+            bubbleSort();
+            resumeButton.disabled = true;
+            pauseButton.disabled = false;
+        }
+
+        function resetSorting() {
+            sorting = false;
+            paused = false;
+            currentPass = 0;
+            currentIteration = 0;
+            steps = [];
+            logContainer.innerHTML = ""; // Clear logs
+            progressBar.style.width = "0%"; // Reset progress
+            array = [45, 12, 78, 23, 56, 89, 15, 34, 67, 90]; // Reset to initial array
+            displayArray();
+            startButton.disabled = false;
+            pauseButton.disabled = true;
+            resumeButton.disabled = true;
+            resetButton.disabled = true;
+        }
+
+        displayArray();
+
+    </script>
+</body>
+
+</html>
