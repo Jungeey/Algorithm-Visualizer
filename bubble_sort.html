@@ -129,6 +129,14 @@
 
 <body>
     <h2>Bubble Sort Visualization</h2>
+    
+    <!-- Input for the user to enter the array -->
+    <div>
+        <label for="array-input">Enter array (comma-separated):</label>
+        <input type="text" id="array-input" placeholder="e.g., 45, 12, 78, 23, 56">
+        <button onclick="updateArray()">Set Array</button>
+    </div>
+
     <div class="progress-bar">
         <div id="progress" class="progress"></div>
     </div>
@@ -149,7 +157,6 @@
     <h3>Sorting Log:</h3>
     <div id="log-container" class="log-container"></div>
 
-
     <script>
         let array = [45, 12, 78, 23, 56, 89, 15, 34, 67, 90];
         const arrayContainer = document.getElementById("array-container");
@@ -161,6 +168,7 @@
         const resetButton = document.getElementById("reset-button");
         const speedInput = document.getElementById("speed");
         const speedValue = document.getElementById("speed-value");
+        const arrayInput = document.getElementById("array-input");
 
         let sortSpeed = 500; // Default speed
         let sorting = false;
@@ -180,6 +188,19 @@
                 startSorting();
             }
         });
+
+        // Function to update the array from user input
+        function updateArray() {
+            const inputValue = arrayInput.value.trim();
+            const newArray = inputValue.split(',').map(num => parseInt(num.trim())).filter(num => !isNaN(num));
+            if (newArray.length > 0) {
+                array = newArray;
+                len = array.length; // Update length when array changes
+                displayArray();
+            } else {
+                alert('Please enter a valid array of numbers');
+            }
+        }
 
         function displayArray(highlightIndices = [], sortedIndex = null, finalSort = false) {
             arrayContainer.innerHTML = "";
@@ -305,23 +326,19 @@
         }
 
         function resetSorting() {
-            sorting = false;
             paused = false;
+            sorting = false;
+            array = [45, 12, 78, 23, 56, 89, 15, 34, 67, 90];
+            steps = [];
             currentPass = 0;
             currentIteration = 0;
-            steps = [];
-            logContainer.innerHTML = ""; // Clear logs
-            progressBar.style.width = "0%"; // Reset progress
-            array = [45, 12, 78, 23, 56, 89, 15, 34, 67, 90]; // Reset to initial array
+            logContainer.innerHTML = "";
+            progressBar.style.width = "0%";
             displayArray();
-            startButton.disabled = false;
-            pauseButton.disabled = true;
-            resumeButton.disabled = true;
-            resetButton.disabled = true;
+            disableAllButtonsExceptStart();
         }
 
         displayArray();
-
     </script>
 </body>
 
