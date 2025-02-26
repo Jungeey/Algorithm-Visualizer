@@ -129,12 +129,14 @@
 
 <body>
     <h2>Bubble Sort Visualization</h2>
-    
+
     <!-- Input for the user to enter the array -->
     <div>
-        <label for="array-input">Enter array (comma-separated):</label>
-        <input type="text" id="array-input" placeholder="e.g., 45, 12, 78, 23, 56">
-        <button onclick="updateArray()">Set Array</button>
+        <h3>
+            <label for="array-input">Enter array (comma-separated):</label>
+            <input type="text" id="array-input" placeholder="e.g., 45, 12, 78, 23, 56">
+            <button onclick="updateArray()">Set Array</button>
+        </h3>
     </div>
 
     <div class="progress-bar">
@@ -152,6 +154,8 @@
         <button id="pause-button" onclick="pauseSorting()" disabled>Pause</button>
         <button id="resume-button" onclick="resumeSorting()" disabled>Resume</button>
         <button id="reset-button" onclick="resetSorting()">Reset</button>
+        <button id="backward-button" onclick="stepBackward()" disabled>Backward</button>
+        <button id="forward-button" onclick="stepForward()" disabled>Forward</button>
     </div>
 
     <h3>Sorting Log:</h3>
@@ -166,6 +170,8 @@
         const pauseButton = document.getElementById("pause-button");
         const resumeButton = document.getElementById("resume-button");
         const resetButton = document.getElementById("reset-button");
+        const backwardButton = document.getElementById("backward-button");
+        const forwardButton = document.getElementById("forward-button");
         const speedInput = document.getElementById("speed");
         const speedValue = document.getElementById("speed-value");
         const arrayInput = document.getElementById("array-input");
@@ -178,6 +184,8 @@
         let len = array.length;
         let currentPass = 0;
         let currentIteration = 0;
+        let history = [];
+        let isitForward = false;
 
         // Update speed value display
         speedInput.addEventListener('input', () => {
@@ -249,7 +257,7 @@
 
         async function bubbleSort() {
             for (let pass = currentPass; pass < len - 1; pass++) {
-                if (currentIteration === 0) {
+                if (!paused && currentIteration === 0) {
                     logMessage(`<b>Pass ${pass + 1}:</b>`);
                 }
 
@@ -261,12 +269,11 @@
                         return;
                     }
 
-                    // Highlighting the elements being compared
+                    history.push([...array]); // Save history for step-backward
+
                     let highlightIndices = [iteration, iteration + 1];
                     displayArray(highlightIndices, len - pass);
 
-                    // Updating the log with the highlighted elements
-                    let beforeSwap = [...array];
                     if (array[iteration] > array[iteration + 1]) {
                         logMessage(`Iteration ${iteration + 1}: ${array.map((num, idx) => idx === iteration || idx === iteration + 1 ? `<span style="color:red;">${num}</span>` : num).join(", ")} <br><b>Swapped → ${array.join(", ")}</b>`, "log-swap");
                         await swapElements(iteration, iteration + 1);
@@ -275,15 +282,18 @@
                     }
 
                     await new Promise(resolve => setTimeout(resolve, sortSpeed));
+
+                    if (isitForward) {
+                        isitForward = false;
+                        pauseSorting();
+                    }
                 }
                 currentIteration = 0;
                 progressBar.style.width = ((pass + 1) / (len - 1)) * 100 + "%";
             }
 
             logMessage(`<b>Final sorted array:</b> ${array.join(", ")}`);
-
-            // Mark the entire array as green for final sorted state
-            displayArray([], len - 1, true); // Pass the finalSort flag as true to turn the array green
+            displayArray([], len - 1, true);
             disableAllButtonsExceptStart();
         }
 
@@ -291,6 +301,8 @@
             pauseButton.disabled = true;
             resumeButton.disabled = true;
             resetButton.disabled = true;
+            backwardButton.disabled = true;
+            forwardButton.disabled = true;
             startButton.disabled = false; // Enable Start Sorting button
         }
 
@@ -300,18 +312,23 @@
             currentPass = 0;
             currentIteration = 0;
             logContainer.innerHTML = ""; // Clear logs
+            history = []; // Clear history
             bubbleSort();
             startButton.disabled = true;
             progressBar.style.width = "0%"; // Correct way to set the progress bar to 0%
             pauseButton.disabled = false;
             resumeButton.disabled = true;
             resetButton.disabled = false;
+            backwardButton.disabled = true;
+            forwardButton.disabled = true;
         }
 
         function pauseSorting() {
             paused = true;
             pauseButton.disabled = true;
             resumeButton.disabled = false;
+            backwardButton.disabled = false;
+            forwardButton.disabled = false;
         }
 
         function resumeSorting() {
@@ -323,6 +340,8 @@
             bubbleSort();
             resumeButton.disabled = true;
             pauseButton.disabled = false;
+            backwardButton.disabled = true;
+            forwardButton.disabled = true;
         }
 
         function resetSorting() {
@@ -337,6 +356,23 @@
             displayArray();
             disableAllButtonsExceptStart();
         }
+
+        function stepBackward() {
+            if (history.length > 1) {
+                history.pop(); // Remove the current state
+                array = [...history[history.length - 1]]; // Go back to the previous state
+                displayArray();
+            }
+        }
+
+        function stepForward() {
+            if (!paused) return; // Only step forward when paused
+            if (currentPass < len - 1 && currentIteration < len - currentPass - 1) {
+                isitForward = true;
+                resumeSorting();
+            }
+        }
+
 
         displayArray();
     </script>
